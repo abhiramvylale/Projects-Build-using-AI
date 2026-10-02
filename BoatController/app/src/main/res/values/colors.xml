@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#1565C0</color>
+    <color name="primary_dark">#0D47A1</color>
+    <color name="accent">#00BCD4</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="dark_bg">#1A1A2E</color>
+    <color name="card_bg">#16213E</color>
+    <color name="monitor_bg">#0F3460</color>
+    <color name="monitor_text">#00FF41</color>
+    <color name="btn_forward">#2196F3</color>
+    <color name="btn_left">#FF9800</color>
+    <color name="btn_right">#4CAF50</color>
+    <color name="btn_up">#9C27B0</color>
+    <color name="btn_back">#E53935</color>
+    <color name="btn_pressed">#37474F</color>
+    <color name="status_connected">#4CAF50</color>
+    <color name="status_disconnected">#F44336</color>
+    <color name="text_secondary">#B0BEC5</color>
+</resources>
