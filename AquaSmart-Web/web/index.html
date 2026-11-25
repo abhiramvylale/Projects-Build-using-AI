@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>AquaSmart — Smart Irrigation Controller</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <main class="app-container">
+    <!-- ====================================================================
+         GATEWAY: DUAL-ROLE LOGIN SCREEN (User Toggle vs Main Operator Toggle)
+         ==================================================================== -->
+    <section id="login-gateway-view" class="login-wrapper" aria-labelledby="login-heading">
+      <div class="card brand-card">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+          </svg>
+        </div>
+        <h1 id="login-heading" class="brand-title">AquaSmart</h1>
+        <p class="brand-subtitle">Smart Wi-Fi Irrigation System (Firebase Cloud)</p>
+      </div>
+
+      <div class="card">
+        <!-- Role Toggle Bar: User vs Main Operator -->
+        <div class="role-toggle-bar" role="tablist" aria-label="Select Login Role">
+          <button
+            id="tab-role-user"
+            class="role-toggle-btn"
+            type="button"
+            role="tab"
+            aria-selected="true"
+          >
+            <span aria-hidden="true">👤</span>
+            <span>User Login</span>
+          </button>
+          <button
+            id="tab-role-operator"
+            class="role-toggle-btn"
+            type="button"
+            role="tab"
+            aria-selected="false"
+          >
+            <span aria-hidden="true">🛡</span>
+            <span>Main Operator</span>
+          </button>
+        </div>
+
+        <h2 id="login-role-title" class="card-title" style="margin-bottom: 6px;">
+          Customer User Sign In
+        </h2>
+        <p id="login-role-desc" class="form-label" style="margin-bottom: 16px;">
+          Sign in with your assigned customer username and password to connect and control your irrigation machine.
+        </p>
+
+        <!-- Sign-In Form (Follows autofill-sign-in-form best practices) -->
+        <form id="login-form" action="#login-form" method="POST" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="login-username" id="login-username-label">
+              Customer Username
+            </label>
+            <input
+              id="login-username"
+              name="username"
+              class="input-field"
+              type="text"
+              autocomplete="username"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              enterkeyhint="next"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="current-password" id="login-password-label">
+              Password
+            </label>
+            <input
+              id="current-password"
+              name="password"
+              class="input-field"
+              type="password"
+              autocomplete="current-password"
+              enterkeyhint="done"
+              required
+            />
+          </div>
+
+          <p id="login-error-msg" class="form-error-msg" aria-live="polite"></p>
+
+          <div class="btn-row" style="margin-top: 8px;">
+            <button id="btn-login-submit" class="btn btn-primary" type="submit">
+              Sign In as Customer User
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick Demo / Starter Credentials Helper -->
+        <div id="login-hint-box" class="credentials-hint-box">
+          <div id="login-hint-text">
+            Starter Customer Login: Username <code>customer1</code> / Password <code>YOUR_DEMO_USER_PASSWORD</code>
+          </div>
+          <button id="btn-fill-demo" class="btn-sm" type="button" style="align-self: flex-start; margin-top: 4px;">
+            Auto-Fill Credentials
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PORTAL 1: MAIN OPERATOR (ADMIN) CONSOLE
+         ==================================================================== -->
+    <section id="operator-console-view" class="view-panel" hidden aria-labelledby="operator-console-title">
+      <header class="top-bar">
+        <div class="connection-info">
+          <span class="status-dot connected" aria-hidden="true"></span>
+          <div>
+            <h1 id="operator-console-title" class="device-title">Main Operator Console</h1>
+            <div id="operator-cloud-subtitle" class="connection-subtitle connected">
+              Master Admin Mode — Firebase Cloud &amp; Machine Provisioning
+            </div>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button id="btn-op-refresh" class="icon-btn" type="button" title="Sync Users &amp; Check All Customer Machines">
+            <span aria-hidden="true">↻</span>
+            <span>Sync Cloud</span>
+          </button>
+          <button id="btn-op-logout" class="btn-icon-danger" type="button" title="Log Out of Main Operator">
+            <span aria-hidden="true">⎋</span>
+            <span>Log Out</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Operator Live Stats -->
+      <div class="operator-stats-grid">
+        <div class="stat-card">
+          <span id="stat-active-users" class="stat-number">0</span>
+          <span class="stat-label">Active Logged-In Users</span>
+        </div>
+        <div class="stat-card">
+          <span id="stat-total-users" class="stat-number">1</span>
+          <span class="stat-label">Assigned Customer Accounts</span>
+        </div>
+        <div class="stat-card">
+          <span id="stat-online-machines" class="stat-number">0</span>
+          <span class="stat-label">ESP32-C3 Units Online</span>
+        </div>
+      </div>
+
+      <!-- 0. Firebase Cloud Database Connection Card -->
+      <section class="card" aria-labelledby="firebase-db-heading">
+        <div class="card-header">
+          <h2 id="firebase-db-heading" class="card-title">
+            <span aria-hidden="true">🔥</span>
+            <span>Firebase Realtime Cloud Database</span>
+          </h2>
+          <span id="firebase-status-badge" class="status-pill offline">○ Local Mode (Add Firebase URL)</span>
+        </div>
+
+        <form id="firebase-config-form" action="#firebase-config-form" method="POST" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="operator-db-url">
+              Firebase Realtime Database URL (e.g. <code>https://your-project-default-rtdb.firebaseio.com</code>)
+            </label>
+            <input
+              id="operator-db-url"
+              name="databaseUrl"
+              class="input-field"
+              type="url"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <p id="firebase-config-feedback" class="form-success-msg" aria-live="polite"></p>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit">
+              Save &amp; Sync Firebase Cloud
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 1. Active Logged-In Users Table -->
+      <section class="card" aria-labelledby="active-users-heading">
+        <div class="card-header">
+          <h2 id="active-users-heading" class="card-title">
+            <span aria-hidden="true">🟢</span>
+            <span>Currently Logged-In / Active Users</span>
+          </h2>
+          <span id="active-sessions-badge" class="status-pill online">● Live Session Tracker</span>
+        </div>
+
+        <div tabindex="0" role="region" aria-labelledby="active-sessions-caption" class="table-wrapper">
+          <table
+            class="data-table"
+            style="--label-2: 'Customer & Role'; --label-3: 'Assigned Machine'; --label-4: 'Last Active'; --label-5: 'Action';"
+          >
+            <caption id="active-sessions-caption">
+              Real-time sessions across customer phones and browsers
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Username</th>
+                <th scope="col">Customer &amp; Role</th>
+                <th scope="col">Assigned Machine</th>
+                <th scope="col">Last Active</th>
+                <th scope="col">Action</th>
+              </tr>
+            </thead>
+            <tbody id="active-sessions-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 2. Create & Assign New Customer User -->
+      <section class="card" aria-labelledby="create-user-heading">
+        <div class="card-header">
+          <h2 id="create-user-heading" class="card-title">
+            <span aria-hidden="true">➕</span>
+            <span>Assign New Customer User &amp; Hardware Unit</span>
+          </h2>
+        </div>
+
+        <form id="create-user-form" action="#create-user-form" method="POST" novalidate>
+          <fieldset class="schedule-fieldset">
+            <legend class="form-label" style="margin-bottom: 12px;">
+              Assign a username, password, and unique Machine ID before handing the unit to your customer.
+            </legend>
+
+            <div class="schedule-time-grid">
+              <div class="form-group">
+                <label class="form-label" for="new-user-username">Customer Username (Required)</label>
+                <input
+                  id="new-user-username"
+                  name="newUsername"
+                  class="input-field"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="new-user-password">Customer Password (Required)</label>
+                <input
+                  id="new-user-password"
+                  name="newPassword"
+                  class="input-field"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="schedule-time-grid">
+              <div class="form-group">
+                <label class="form-label" for="new-user-fullname">Customer Full Name</label>
+                <input
+                  id="new-user-fullname"
+                  name="fullName"
+                  class="input-field"
+                  type="text"
+                  autocomplete="off"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="new-user-devicename">Assigned Machine Name</label>
+                <input
+                  id="new-user-devicename"
+                  name="deviceName"
+                  class="input-field"
+                  type="text"
+                  value="AquaSmart Irrigation #2"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="new-user-token">
+                Assigned Machine ID / Serial (Unlimited Machines Supported)
+              </label>
+              <input
+                id="new-user-token"
+                name="machineId"
+                class="input-field"
+                type="text"
+                value="AQ-ESP32-002"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+              />
+            </div>
+
+            <p id="create-user-feedback" class="form-error-msg" aria-live="polite"></p>
+
+            <div class="btn-row">
+              <button class="btn btn-primary" type="submit">
+                Assign &amp; Create Customer Account
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+
+      <!-- 3. Registered Customer Accounts Directory -->
+      <section class="card" aria-labelledby="users-dir-heading">
+        <div class="card-header">
+          <h2 id="users-dir-heading" class="card-title">
+            <span aria-hidden="true">📋</span>
+            <span>Assigned Customer Users Directory</span>
+          </h2>
+        </div>
+
+        <div tabindex="0" role="region" aria-labelledby="users-dir-caption" class="table-wrapper">
+          <table
+            class="data-table"
+            style="--label-2: 'Customer & Machine'; --label-3: 'Password & Machine ID'; --label-4: 'ESP32 Status'; --label-5: 'Actions';"
+          >
+            <caption id="users-dir-caption">
+              All customer accounts, passwords, assigned Machine IDs, and live dashboard preview controls
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Username</th>
+                <th scope="col">Customer &amp; Machine</th>
+                <th scope="col">Password &amp; Machine ID</th>
+                <th scope="col">ESP32 Status</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-dir-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Master Operator Credentials Update Card -->
+      <details class="card diagnostics-card">
+        <summary>
+          <span class="card-title">
+            <span aria-hidden="true">🔐</span>
+            <span>Update Master Operator Username &amp; Password</span>
+          </span>
+          <span class="status-pill online">Master Security</span>
+        </summary>
+
+        <form id="master-creds-form" action="#master-creds-form" method="POST" style="margin-top: 14px;" novalidate>
+          <div class="schedule-time-grid">
+            <div class="form-group">
+              <label class="form-label" for="master-user-input">Master Operator Username</label>
+              <input
+                id="master-user-input"
+                name="masterUsername"
+                class="input-field"
+                type="text"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="master-pass-input">Master Operator Password</label>
+              <input
+                id="master-pass-input"
+                name="masterPassword"
+                class="input-field"
+                type="text"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+              />
+            </div>
+          </div>
+
+          <p id="master-creds-feedback" class="form-success-msg" aria-live="polite"></p>
+
+          <div class="btn-row">
+            <button class="btn btn-secondary" type="submit">
+              Save Master Credentials
+            </button>
+          </div>
+        </form>
+      </details>
+    </section>
+
+    <!-- ====================================================================
+         PORTAL 2: CUSTOMER IRRIGATION DASHBOARD & TERMINAL SHELL
+         ==================================================================== -->
+    <div id="customer-portal-shell" class="view-panel" hidden>
+      <!-- Banner shown when Main Operator is previewing a customer's machine -->
+      <div id="operator-inspect-banner" class="operator-inspect-banner" hidden>
+        <div>
+          <strong style="color: var(--teal-300);">🛡 Operator Preview Mode:</strong>
+          <span id="inspect-banner-text">Viewing Customer Dashboard</span>
+        </div>
+        <button id="btn-exit-inspect" class="btn-sm" type="button">
+          ← Back to Operator Console
+        </button>
+      </div>
+
+      <!-- Top Connection Bar -->
+      <header class="top-bar">
+        <div class="connection-info">
+          <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+          <div>
+            <div id="device-name" class="device-title">AquaSmart Irrigation</div>
+            <div id="connection-subtitle" class="connection-subtitle">Connecting to Firebase Cloud...</div>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <span id="logged-in-user-pill" class="status-pill online" title="Logged-in User">
+            👤 customer1
+          </span>
+          <button id="btn-wifi-wizard" class="icon-btn" type="button" title="Connect Your ESP32-C3 Machine to Wi-Fi">
+            <span aria-hidden="true">📶</span>
+            <span>Wi-Fi Setup</span>
+          </button>
+          <button id="btn-sync-time" class="icon-btn" type="button" title="Sync Browser Time to Device">
+            <span aria-hidden="true">🕒</span>
+            <span>Sync Time</span>
+          </button>
+          <button id="btn-toggle-terminal" class="icon-btn" type="button" aria-pressed="false" title="Open Interactive UART Terminal">
+            <span aria-hidden="true">&gt;_</span>
+            <span id="btn-terminal-label">Terminal</span>
+          </button>
+          <button id="btn-refresh-now" class="icon-btn" type="button" title="Refresh State Now">
+            <span aria-hidden="true">↻</span>
+          </button>
+          <button id="btn-open-settings" class="icon-btn" type="button" title="Cloud &amp; Mode Settings">
+            <span aria-hidden="true">⚙</span>
+          </button>
+          <button id="btn-user-logout" class="btn-icon-danger" type="button" title="Log Out">
+            <span aria-hidden="true">⎋</span>
+            <span>Log Out</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- First-Time / Offline Hardware Onboarding Banner -->
+      <section id="onboarding-wifi-card" class="operator-inspect-banner" hidden aria-label="Initial Wi-Fi Setup Guide">
+        <div>
+          <strong style="color: var(--teal-300);">📶 Setting Up Your Machine for the First Time?</strong>
+          <div style="font-size: 0.84rem; color: var(--white-87); margin-top: 2px;">
+            Establish the initial Wi-Fi connection between your AquaSmart hardware (<code id="onboarding-machine-id">AQ-ESP32-001</code>) and your router.
+          </div>
+        </div>
+        <button id="btn-open-wifi-wizard-banner" class="btn-sm" type="button">
+          Connect Machine to Wi-Fi →
+        </button>
+      </section>
+
+      <!-- VIEW 2A: MAIN IRRIGATION DASHBOARD -->
+      <div id="dashboard-view" class="view-panel">
+        <!-- App Brand Title Card -->
+        <section class="card brand-card" aria-label="AquaSmart Header">
+          <div class="brand-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+            </svg>
+          </div>
+          <h1 class="brand-title">AquaSmart</h1>
+          <p id="customer-welcome-subtitle" class="brand-subtitle">Smart Irrigation Controller</p>
+        </section>
+
+        <!-- System Master Toggle Card -->
+        <section class="card" aria-labelledby="master-card-title">
+          <div class="master-row">
+            <div class="master-info">
+              <h2 id="master-card-title" class="card-title">System Master</h2>
+              <p id="master-status-text" class="master-status-text">
+                <span id="master-status-icon" aria-hidden="true">○</span>
+                <span id="master-status-label">Disabled</span>
+              </p>
+            </div>
+
+            <label class="switch-label" for="master-switch">
+              <span class="form-label" id="master-switch-hint">Master Power</span>
+              <input id="master-switch" name="masterSwitch" type="checkbox" switch aria-describedby="master-status-text" />
+            </label>
+          </div>
+        </section>
+
+        <!-- Irrigation Schedule Card -->
+        <section class="card" aria-labelledby="schedule-card-title">
+          <div class="card-header">
+            <h2 id="schedule-card-title" class="card-title">
+              <span aria-hidden="true">🗓</span>
+              <span>Irrigation Schedule</span>
+            </h2>
+            <button id="btn-add-schedule" class="icon-btn" type="button" title="Add New Irrigation Timer">
+              <span aria-hidden="true">＋</span>
+              <span>Add Timer</span>
+            </button>
+          </div>
+
+          <div id="schedule-tabs" class="schedule-tabs" role="tablist" aria-label="Irrigation Timer Slots"></div>
+
+          <form id="schedule-form" action="#schedule-form" method="POST" novalidate>
+            <fieldset class="schedule-fieldset">
+              <legend class="form-label" style="margin-bottom: 10px;">
+                Configure <strong id="active-schedule-legend" style="color: var(--teal-300);">T1</strong> Start Time &amp; Duration
+              </legend>
+
+              <div class="schedule-time-grid">
+                <div class="form-group">
+                  <label class="form-label" for="sched-hour">Hour (0–23)</label>
+                  <input
+                    id="sched-hour"
+                    name="startHour"
+                    class="input-field"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="^(?:[01]?[0-9]|2[0-3])$"
+                    autocomplete="off"
+                    required
+                    aria-describedby="schedule-window-preview schedule-form-error"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="sched-minute">Min (0–59)</label>
+                  <input
+                    id="sched-minute"
+                    name="startMinute"
+                    class="input-field"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="^[0-5]?[0-9]$"
+                    autocomplete="off"
+                    required
+                    aria-describedby="schedule-window-preview schedule-form-error"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="sched-duration">Duration (minutes, 1–1440)</label>
+                <input
+                  id="sched-duration"
+                  name="durationMinutes"
+                  class="input-field"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="^(?:[1-9][0-9]{0,2}|1[0-3][0-9]{2}|14[0-3][0-9]|1440)$"
+                  autocomplete="off"
+                  required
+                  aria-describedby="schedule-window-preview schedule-form-error"
+                />
+              </div>
+
+              <div id="schedule-window-preview" class="schedule-window-preview">
+                <span id="schedule-window-text">T1ON:08:00:00 → T1OFF:08:15:00</span>
+                <span id="schedule-enabled-badge" class="status-pill offline">○ Timer Disabled</span>
+              </div>
+
+              <p id="schedule-form-error" class="form-error-msg" aria-live="polite"></p>
+
+              <div class="schedule-toggle-row">
+                <label class="checkbox-label" for="sched-enabled">
+                  <input id="sched-enabled" name="isEnabled" type="checkbox" />
+                  <span>Enable Timer</span>
+                </label>
+
+                <button id="btn-delete-schedule" class="btn-icon-danger" type="button" title="Delete Selected Timer">
+                  <span aria-hidden="true">🗑</span>
+                  <span>Delete</span>
+                </button>
+              </div>
+
+              <div class="btn-row">
+                <button id="btn-save-schedule" class="btn btn-primary" type="submit">
+                  Save Timer
+                </button>
+                <button id="btn-sync-all-schedules" class="btn btn-secondary" type="button">
+                  <span aria-hidden="true">⇄</span>
+                  <span>Sync All</span>
+                </button>
+              </div>
+            </fieldset>
+          </form>
+        </section>
+
+        <!-- Manual Override Card -->
+        <section class="card" aria-labelledby="manual-card-title">
+          <div class="card-header">
+            <h2 id="manual-card-title" class="card-title">Manual Override</h2>
+            <span id="valve-status-pill" class="status-pill offline">○ VALVE CLOSED</span>
+          </div>
+
+          <div class="btn-row">
+            <button id="btn-valve-open" class="btn btn-primary" type="button" disabled>
+              <span aria-hidden="true">▲</span>
+              <span>OPEN VALVE</span>
+            </button>
+            <button id="btn-valve-close" class="btn btn-danger" type="button" disabled>
+              <span aria-hidden="true">■</span>
+              <span>CLOSE VALVE</span>
+            </button>
+          </div>
+
+          <p id="interlock-hint" class="interlock-hint locked">
+            <span aria-hidden="true">🔒</span>
+            <span id="interlock-text">Enable System Master above to unlock manual valve controls.</span>
+          </p>
+        </section>
+
+        <!-- Live Clock & Temperature Row -->
+        <div class="telemetry-row">
+          <section class="card telemetry-card" aria-labelledby="clock-card-label">
+            <div class="telemetry-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div id="live-clock-value" class="telemetry-value">--:--:--</div>
+            <h2 id="clock-card-label" class="telemetry-label">Device Time</h2>
+            <span id="clock-source-sub" class="telemetry-sub">Firebase Cloud / Browser Sync</span>
+          </section>
+
+          <section class="card telemetry-card" aria-labelledby="temp-card-label">
+            <div class="telemetry-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>
+              </svg>
+            </div>
+            <div id="temp-value" class="telemetry-value">26.4°C</div>
+            <h2 id="temp-card-label" class="telemetry-label">Temperature</h2>
+            <span id="temp-status-sub" class="telemetry-sub">Optimal Range</span>
+          </section>
+        </div>
+      </div>
+
+      <!-- VIEW 2B: INTERACTIVE SERIAL TERMINAL -->
+      <section id="terminal-view" class="view-panel" hidden aria-labelledby="terminal-card-title">
+        <div class="card">
+          <div class="terminal-toolbar">
+            <h2 id="terminal-card-title" class="card-title">
+              <span aria-hidden="true">&gt;_</span>
+              <span>AquaSmart UART / Firebase Cloud Terminal</span>
+            </h2>
+
+            <div class="top-actions">
+              <button id="btn-hex-mode" class="icon-btn" type="button" aria-pressed="false">
+                Hex Mode: OFF
+              </button>
+              <button id="btn-newline-mode" class="icon-btn" type="button" title="Cycle Line Ending">
+                Newline: \r\n
+              </button>
+              <button id="btn-clear-terminal" class="btn-icon-danger" type="button" title="Clear Terminal History">
+                <span aria-hidden="true">🗑</span>
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="terminal-viewport" class="terminal-viewport" aria-live="polite" aria-label="Serial Terminal Log"></div>
+
+          <div class="terminal-macro-row" role="group" aria-label="Terminal Quick Macros">
+            <button class="macro-btn" type="button" data-macro="AT">M1: AT</button>
+            <button class="macro-btn" type="button" data-macro="INFO">M2: INFO</button>
+            <button class="macro-btn" type="button" data-macro="STATUS">M3: STATUS</button>
+            <button class="macro-btn" type="button" data-macro="MASTER:ON">MASTER:ON</button>
+            <button class="macro-btn" type="button" data-macro="RELAY:ON">RELAY:ON</button>
+            <button class="macro-btn" type="button" data-macro="RELAY:OFF">RELAY:OFF</button>
+          </div>
+
+          <form id="terminal-form" action="#terminal-form" method="POST" novalidate>
+            <div class="terminal-input-row">
+              <div style="flex: 1;">
+                <label class="form-label" for="terminal-input" style="display: block; margin-bottom: 4px;">
+                  Command Input (Text or Hex bytes)
+                </label>
+                <input
+                  id="terminal-input"
+                  name="command"
+                  class="input-field"
+                  type="text"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  enterkeyhint="send"
+                  required
+                />
+              </div>
+              <button id="btn-send-terminal" class="btn-send-fab" type="submit" title="Send Command" style="align-self: flex-end;">
+                ➤
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Collapsible Firebase Cloud Bridge & Datastream Inspector -->
+      <details class="card diagnostics-card">
+        <summary>
+          <span class="card-title">
+            <span aria-hidden="true">📡</span>
+            <span>Firebase Cloud Bridge &amp; Machine State</span>
+          </span>
+          <span id="hw-status-pill" class="status-pill offline">… CONNECTING</span>
+        </summary>
+
+        <div class="datastream-grid">
+          <div class="datastream-item">
+            <span class="ds-pin">State: master</span>
+            <span class="ds-name">System Master</span>
+            <span id="val-v0" class="ds-value">1 (ON)</span>
+          </div>
+          <div class="datastream-item">
+            <span class="ds-pin">State: valve</span>
+            <span class="ds-name">GPIO 3 Relay</span>
+            <span id="val-v1" class="ds-value">0 (CLOSED)</span>
+          </div>
+          <div class="datastream-item">
+            <span class="ds-pin">State: temp</span>
+            <span class="ds-name">Temperature</span>
+            <span id="val-v2" class="ds-value">26.4 °C</span>
+          </div>
+          <div class="datastream-item">
+            <span class="ds-pin">State: time</span>
+            <span class="ds-name">Device Clock</span>
+            <span id="val-v3" class="ds-value">--:--:--</span>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 12px;">
+          <button id="btn-toggle-sim" class="btn btn-secondary" type="button">
+            Switch to Simulator Mode
+          </button>
+          <span id="last-sync-label" class="form-label" style="align-self: center; text-align: right; flex: 1;">
+            Not synced yet
+          </span>
+        </div>
+
+        <div id="log-preview" class="log-preview" aria-live="polite" aria-label="Firebase REST Activity Log"></div>
+      </details>
+    </div>
+  </main>
+
+  <!-- ====================================================================
+       MODAL 1: INITIAL WI-FI CONNECTION WIZARD (Customer Onboarding)
+       ==================================================================== -->
+  <dialog id="wifi-wizard-modal" class="settings-modal" closedby="any" aria-labelledby="wifi-wizard-title">
+    <form method="dialog">
+      <div class="card-header">
+        <h2 id="wifi-wizard-title" class="card-title">
+          <span aria-hidden="true">📶</span>
+          <span>Connect Your Machine to Wi-Fi</span>
+        </h2>
+      </div>
+
+      <p class="form-label" style="margin-bottom: 14px; color: var(--white-87);">
+        Follow these 3 quick steps to establish the initial Wi-Fi connection for your assigned controller (<strong id="wizard-machine-label" style="color: var(--teal-300);">AQ-ESP32-001</strong>):
+      </p>
+
+      <div class="credentials-hint-box" style="margin-top: 0; margin-bottom: 12px; gap: 10px;">
+        <div>
+          <strong style="color: var(--teal-300);">Step 1 — Power On Your AquaSmart Unit</strong>
+          <div>Plug your ESP32-C3 controller into a USB/5V power adapter. If it is already connected to another Wi-Fi, hold the <code>BOOT</code> button (GPIO 9) for 5 seconds.</div>
+        </div>
+        <div>
+          <strong style="color: var(--teal-300);">Step 2 — Connect to the Setup Hotspot</strong>
+          <div>On this phone or computer, open Wi-Fi settings and connect to the network named <code>AquaSmart-Setup</code>.</div>
+        </div>
+        <div>
+          <strong style="color: var(--teal-300);">Step 3 — Open the Machine Setup Screen</strong>
+          <div>Click the button below while connected to <code>AquaSmart-Setup</code>. It will pre-fill your assigned Machine ID and Cloud Database URL automatically:</div>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top: 12px;">
+        <a
+          id="link-open-captive-portal"
+          href="http://192.168.4.1"
+          target="_blank"
+          rel="noopener"
+          class="btn btn-primary"
+          style="text-decoration: none; text-align: center;"
+        >
+          Open Machine Setup Page (192.168.4.1) ↗
+        </a>
+        <button id="btn-close-wifi-wizard" class="btn btn-secondary" type="submit">
+          Done / Close
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ====================================================================
+       MODAL 2: FIREBASE CLOUD & SIMULATOR SETTINGS
+       ==================================================================== -->
+  <dialog id="settings-modal" class="settings-modal" closedby="any" aria-labelledby="settings-title">
+    <form method="dialog">
+      <div class="card-header">
+        <h2 id="settings-title" class="card-title">Firebase Cloud &amp; Machine Settings</h2>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="input-template-id">FIREBASE_DATABASE_URL</label>
+        <input id="input-template-id" name="databaseUrl" class="input-field" type="url" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="input-template-name">MACHINE_NAME</label>
+        <input id="input-template-name" name="deviceName" class="input-field" type="text" autocomplete="off" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="input-auth-token">MACHINE_ID (Serial)</label>
+        <input id="input-auth-token" name="machineId" class="input-field" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      </div>
+
+      <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 8px;">
+        <input id="input-sim-mode" name="simulatorMode" type="checkbox" style="width: 18px; height: 18px;" />
+        <label class="form-label" for="input-sim-mode" style="color: var(--white-87); cursor: pointer;">
+          Enable Local Simulator Mode (test without ESP32-C3 powered on)
+        </label>
+      </div>
+
+      <div class="btn-row" style="margin-top: 16px;">
+        <button id="btn-save-settings" class="btn btn-primary" type="submit">Save &amp; Reconnect</button>
+        <button id="btn-reset-defaults" class="btn btn-secondary" type="button">Reset Defaults</button>
+        <button id="btn-close-settings" class="btn btn-secondary" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "aquasmart": {
+      ".read": true,
+      ".write": true,
+      "machines": {
+        "$machineId": {
+          "state": {
+            "master": {
+              ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
+            },
+            "valve": {
+              ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
+            }
+          }
+        }
+      }
+    }
+  }
+}
