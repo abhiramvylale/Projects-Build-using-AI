@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">AquaSmart</string>
+    <string name="app_subtitle">Smart Irrigation</string>
+    <string name="scanning">Scanning for devices...</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="dashboard_title">Dashboard</string>
+</resources>

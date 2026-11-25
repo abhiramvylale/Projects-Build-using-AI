@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.AquaSmart" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:navigationBarColor">@color/white</item>
+    </style>
+</resources>
